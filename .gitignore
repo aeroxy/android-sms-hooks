@@ -1,4 +1,5 @@
 *.iml
+*.log
 .externalNativeBuild
 .gradle
 .idea/*
@@ -10,4 +11,3 @@
 ktlint
 app/release
 keystore.properties
-log
