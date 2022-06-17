@@ -2,9 +2,12 @@
 .externalNativeBuild
 .gradle
 .idea/*
+.vscode/*
+.DS_Store
 /build
 /captures
 /local.properties
 ktlint
 app/release
 keystore.properties
+log
