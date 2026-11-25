@@ -1,0 +1,99 @@
+<resources>
+    <string name="app_name">SMS Hooks</string>
+
+    <!-- 权限页 -->
+    <string name="btn_app_settings">系统设置</string>
+    <string name="btn_request_permissions">好的，再试一次</string>
+    <string name="img_alt_notify">确认</string>
+    <string name="text_sms_permission_edu">为了转发短信，本应用需要读取收到的短信。</string>
+    <string name="text_sms_permission_denied_help">缺少短信权限，请在系统设置里允许。</string>
+    <string name="title_sms_permission_edu">需要权限</string>
+    <string name="title_sms_permission_denied">权限被拒绝</string>
+
+    <!-- 设置检查 -->
+    <string name="cat_checks">设置检查</string>
+    <string name="summary_all_ok">✅ 一切正常</string>
+    <string name="summary_todo">⚠️ 还有 %d 项需要处理</string>
+    <string name="check_tap_to_fix">点击带 ⚠️ 的项目去处理</string>
+
+    <string name="check_server">服务器地址和密钥</string>
+    <string name="check_server_ok">✅ 已填写</string>
+    <string name="check_server_todo">⚠️ 请在下方填写服务器地址和密钥</string>
+    <string name="check_server_off">⚠️ 下方的“转发短信”开关是关着的</string>
+
+    <string name="check_sms">短信权限</string>
+    <string name="check_allowed">✅ 已允许</string>
+    <string name="check_sms_todo">⚠️ 点击允许（选“始终允许”）</string>
+
+    <string name="check_battery">电池优化</string>
+    <string name="check_off">✅ 已关闭</string>
+    <string name="check_battery_todo">⚠️ 点击后选择“允许”，让应用在后台运行</string>
+
+    <string name="check_unused">未使用时移除权限</string>
+    <string name="check_unused_todo">⚠️ 点击后把这个开关关掉</string>
+
+    <string name="check_autostart">自启动</string>
+    <string name="check_on">✅ 已开启</string>
+    <string name="check_autostart_todo">⚠️ 点击后打开 SMS Hooks 的自启动</string>
+
+    <string name="check_notification_sms">通知类短信（验证码）</string>
+    <string name="check_notification_sms_todo">⚠️ 收验证码必需。点击后把“通知类短信”设为允许</string>
+
+    <string name="check_unreadable">⚠️ 无法自动检测，点击查看需要设置什么</string>
+    <string name="steps_miui_autostart">打开 SMS Hooks 的自启动：\n应用信息 → 自启动 → 打开</string>
+    <string name="steps_miui_notification_sms">允许“通知类短信”（收验证码必需）：\n应用信息 → 权限管理 → 通知类短信 → 允许</string>
+    <string name="export_failed">日志保存失败</string>
+
+    <string name="check_miui_manual">省电策略、免费网络短信、锁定后台</string>
+    <string name="check_huawei_manual">应用启动管理、验证码保护、锁定后台</string>
+    <string name="check_confirm_todo">⚠️ 点击查看需要设置什么</string>
+    <string name="check_confirmed">✅ 已确认</string>
+    <string name="steps_miui">1. 应用信息 → 省电策略 → 无限制\n2. 短信 App → 设置 → 关闭“免费网络短信”\n3. 打开最近任务，下拉 SMS Hooks 的卡片把它锁定\n4. 应用信息 → 权限管理：所有权限都选“始终允许”，并关闭“空白通行证”</string>
+    <string name="steps_huawei">1. 设置 → 应用 → 应用启动管理 → SMS Hooks：关闭“自动管理”，打开“允许自启动”“允许关联启动”“允许后台活动”\n2. 信息 App → 设置 → 关闭“验证码安全保护”\n3. 打开最近任务，下拉 SMS Hooks 的卡片把它锁定\n4. 如果图标上有红色“!”：手机管家 → 病毒查杀 → 应用管控中心 → 解除管控</string>
+    <string name="btn_open_settings">去设置</string>
+    <string name="btn_done">已完成</string>
+
+    <string name="check_test">测试发送</string>
+    <string name="check_test_todo">⚠️ 点击发送一条测试消息</string>
+    <string name="check_test_running">正在发送…</string>
+    <string name="check_test_needs_setup">请先填写服务器地址和密钥</string>
+    <string name="status_line">%1$s · %2$s</string>
+    <string name="status_line_detail">%1$s · %2$s\n%3$s</string>
+
+    <string name="check_last_sms">最近收到的短信</string>
+    <string name="check_last_sms_none">还没有。用任意 App 获取一次短信验证码，看这里有没有出现</string>
+    <string name="last_sms_line">%1$s · [%2$s] %3$s\n%4$s</string>
+    <string name="last_sms_pending">正在发送…</string>
+    <string name="last_sms_not_sent">⚠️ 没有发送：转发没开，或服务器没填</string>
+    <string name="retrying_suffix">%1$s · 稍后自动重试</string>
+
+    <!-- 发送结果 -->
+    <string name="result_ok">✅ 成功</string>
+    <string name="result_channel_failed">⚠️ 服务器发送失败</string>
+    <string name="result_bad_secret">⚠️ 密钥不对</string>
+    <string name="result_bad_url">⚠️ 地址不对</string>
+    <string name="result_server_error">⚠️ 服务器出错</string>
+    <string name="result_network_down">🛜 网络不通</string>
+    <string name="result_phone_offline">📵 手机没联网</string>
+
+    <!-- 转发设置 -->
+    <string name="cat_forwarding">转发设置</string>
+    <string name="pref_enabled">转发短信</string>
+    <string name="pref_url">服务器地址</string>
+    <string name="pref_url_help">服务器的 https:// 地址</string>
+    <string name="pref_secret">密钥</string>
+    <string name="pref_sim1">SIM 1 备注</string>
+    <string name="pref_sim2">SIM 2 备注</string>
+    <string name="pref_sim_help">可选，例如这张卡的号码。每条消息里会显示为 [SIM1 备注]</string>
+    <string name="not_set">未填写</string>
+    <string name="is_set">已填写</string>
+    <string name="optional">可选</string>
+    <string name="invalid_url">请输入 https:// 开头的地址</string>
+
+    <!-- 调试 -->
+    <string name="cat_debug">调试</string>
+    <string name="pref_export_logs">导出日志</string>
+    <string name="pref_export_logs_summary">把日志存成文件，发给帮你设置的人</string>
+    <string name="no_log_yet">还没有日志</string>
+    <string name="pref_version">版本</string>
+</resources>

@@ -1,0 +1,77 @@
+name: Build APK
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      # The commit that is built and that the APK is named after. For a pull request this is the
+      # PR's head commit, not the merge commit GitHub would otherwise check out.
+      APP_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.APP_COMMIT }}
+
+      # Without the key, the APK would be signed with a throwaway key and couldn't update the
+      # installed app, so a missing secret fails the build.
+      - name: Restore the signing key
+        env:
+          SIGNING_KEYSTORE_BASE64: ${{ secrets.SIGNING_KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$SIGNING_KEYSTORE_BASE64" ]; then
+            echo "::error::Repository secret SIGNING_KEYSTORE_BASE64 is not set"
+            exit 1
+          fi
+          echo "$SIGNING_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/signing.p12"
+          echo "SIGNING_KEYSTORE=$RUNNER_TEMP/signing.p12" >> "$GITHUB_ENV"
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      # Also checks gradle-wrapper.jar against Gradle's published checksums.
+      - uses: gradle/actions/setup-gradle@v6
+
+      - name: Build and run unit tests
+        env:
+          SIGNING_KEYSTORE_PASSWORD: ${{ secrets.SIGNING_KEYSTORE_PASSWORD }}
+        run: ./gradlew assembleDebug testDebugUnitTest
+
+      - name: Name the APK and print its signing certificate
+        id: apk
+        run: |
+          name="sms-hooks-${GITHUB_RUN_NUMBER}-${APP_COMMIT::7}.apk"
+          mv app/build/outputs/apk/debug/app-debug.apk "$name"
+          build_tools=$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)
+          {
+            echo "### $name"
+            echo '```'
+            "$ANDROID_HOME/build-tools/$build_tools/apksigner" verify --print-certs "$name"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "name=$name" >> "$GITHUB_OUTPUT"
+
+      # archive: false uploads the .apk itself, so the download is the APK, not a zip.
+      - uses: actions/upload-artifact@v7
+        with:
+          path: ${{ steps.apk.outputs.name }}
+          archive: false
+          if-no-files-found: error
+
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-reports
+          path: app/build/reports/tests/
+          if-no-files-found: ignore

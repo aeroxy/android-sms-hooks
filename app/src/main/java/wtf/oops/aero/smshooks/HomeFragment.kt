@@ -1,0 +1,83 @@
+package wtf.oops.aero.smshooks
+
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Bundle
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
+import androidx.fragment.app.Fragment
+import androidx.navigation.NavOptions
+import androidx.navigation.fragment.findNavController
+
+class HomeFragment : Fragment() {
+    private val registrationToAskPermission =
+        registerForActivityResult(
+            ActivityResultContracts.RequestPermission()
+        ) { isGranted -> onAskPermissionResult(isGranted) }
+
+    /**
+     * Whether the permission dialog is already showing. Kept across recreation (e.g. rotating the
+     * phone), which would otherwise launch a second request that Android answers as "denied".
+     */
+    private var requestInFlight = false
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        requestInFlight = savedInstanceState?.getBoolean(KEY_REQUEST_IN_FLIGHT) ?: false
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putBoolean(KEY_REQUEST_IN_FLIGHT, requestInFlight)
+    }
+
+    override fun onCreateView(
+        inflater: LayoutInflater, container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View? {
+        if (ContextCompat.checkSelfPermission(
+                requireContext(), Manifest.permission.RECEIVE_SMS
+            ) == PackageManager.PERMISSION_GRANTED
+        ) {
+            findNavController().navigate(R.id.action_homeFragment_to_settingsFragment)
+        } else if (!requestInFlight) {
+            requestInFlight = true
+            registrationToAskPermission.launch(Manifest.permission.RECEIVE_SMS)
+        }
+        return inflater.inflate(R.layout.fragment_home, container, false)
+    }
+
+    private fun onAskPermissionResult(isGranted: Boolean) {
+        requestInFlight = false
+        if (isGranted) {
+            findNavController().navigate(R.id.action_homeFragment_to_settingsFragment)
+        } else {
+            if (shouldShowRequestPermissionRationale(Manifest.permission.RECEIVE_SMS)) {
+                NavOptions.Builder().apply {
+                    setEnterAnim(R.anim.slide_in_bottom)
+                    setPopExitAnim(R.anim.slide_out_bottom)
+                    findNavController().navigate(R.id.permissionsEduFragment, null, build())
+                }
+            } else {
+                /**
+                 * Possible reasons:
+                 *  - User clicked the "Deny & Don't Ask Again" option
+                 *  - User clicked deny multiple times
+                 *  - User dismissed the permissions dialog without choosing an option
+                 */
+                NavOptions.Builder().apply {
+                    setEnterAnim(R.anim.slide_in_bottom)
+                    setPopExitAnim(R.anim.slide_out_bottom)
+                    findNavController().navigate(R.id.permissionsDeniedFragment, null, build())
+                }
+            }
+        }
+    }
+
+    private companion object {
+        const val KEY_REQUEST_IN_FLIGHT = "requestInFlight"
+    }
+}
