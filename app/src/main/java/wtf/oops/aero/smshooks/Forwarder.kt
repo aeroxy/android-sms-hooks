@@ -11,9 +11,10 @@ import androidx.work.workDataOf
 import wtf.oops.aero.smshooks.core.Message
 import wtf.oops.aero.smshooks.core.Outcome
 import wtf.oops.aero.smshooks.core.Sender
+import java.util.UUID
 import java.util.concurrent.TimeUnit
 
-/** Sends to send_msg with the settings typed in the app, and queues retries. */
+/** Sends to the server with the settings typed in the app, and manages queued retries. */
 object Forwarder {
     /** The receiver must finish well within Android's broadcast limit. */
     const val RECEIVER_TIMEOUT_S = 8L
@@ -26,7 +27,7 @@ object Forwarder {
             .send(prefs.url, prefs.secret, content, timestamp) { Device.isOnline(context) }
     }
 
-    /** The test message uses the same three lines as an SMS, naming the phone and the build. */
+    /** The test message uses the same format as an SMS, naming the phone and the build. */
     fun testContent(): String = Message.content(
         sender = "SMS Hooks",
         receiver = "${Build.MANUFACTURER} ${Build.MODEL}",
@@ -38,19 +39,30 @@ object Forwarder {
         EventLog.write(context, "SEND via=$via result=${outcome.verdict} detail=${outcome.detail}$retry")
     }
 
-    fun enqueueRetry(context: Context, smsId: String, content: String, timestamp: Long) {
+    /**
+     * Saves the SMS and schedules its retry *before* the first send, so it is not lost if the
+     * process is killed mid-send. The retry waits longer than a first send can take, and is
+     * cancelled once that send settles. Returns the retry's ID, or null if it couldn't be queued.
+     */
+    fun queue(context: Context, smsId: String, content: String, timestamp: Long): UUID? = try {
+        Outbox.put(context, smsId, content)
         val request = OneTimeWorkRequestBuilder<WebhookWorker>()
-            .setInputData(
-                workDataOf(
-                    WebhookWorker.KEY_ID to smsId,
-                    WebhookWorker.KEY_CONTENT to content,
-                    WebhookWorker.KEY_TIMESTAMP to timestamp,
-                ),
-            )
+            .setInputData(workDataOf(WebhookWorker.KEY_ID to smsId, WebhookWorker.KEY_TIMESTAMP to timestamp))
             .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
             .setInitialDelay(30, TimeUnit.SECONDS)
             .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
             .build()
-        WorkManager.getInstance(context).enqueue(request)
+        // Block until WorkManager has stored it, so the retry exists before the send starts.
+        WorkManager.getInstance(context).enqueue(request).result.get()
+        request.id
+    } catch (e: Exception) {
+        EventLog.write(context, "ERROR could not queue a retry: $e")
+        null
+    }
+
+    /** The first send settled without needing a retry: drop the queued retry and the saved copy. */
+    fun settle(context: Context, smsId: String, retryId: UUID?) {
+        if (retryId != null) WorkManager.getInstance(context).cancelWorkById(retryId)
+        Outbox.remove(context, smsId)
     }
 }

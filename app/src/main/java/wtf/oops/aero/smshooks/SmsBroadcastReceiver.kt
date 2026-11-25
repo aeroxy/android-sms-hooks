@@ -45,13 +45,14 @@ class SmsBroadcastReceiver : BroadcastReceiver() {
         val pending = goAsync()
         thread {
             try {
+                val retryId = Forwarder.queue(context, id, content, timestamp)
                 val outcome = Forwarder.send(context, content, timestamp, Forwarder.RECEIVER_TIMEOUT_S)
                 Forwarder.log(context, "receiver", outcome)
-                prefs.saveSmsResult(id, outcome)
-                if (outcome.retry) Forwarder.enqueueRetry(context, id, content, timestamp)
+                // Without a queued retry, don't claim one is coming.
+                prefs.saveSmsResult(id, if (retryId == null) outcome.copy(retry = false) else outcome)
+                if (!outcome.retry) Forwarder.settle(context, id, retryId)
             } catch (t: Throwable) {
                 EventLog.write(context, "ERROR in receiver: $t")
-                Forwarder.enqueueRetry(context, id, content, timestamp)
             } finally {
                 pending.finish()
             }

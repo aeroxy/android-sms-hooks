@@ -16,14 +16,12 @@ class Prefs(context: Context) {
     val simLabels: List<String?> get() = listOf(sp.getString(KEY_SIM1, null), sp.getString(KEY_SIM2, null))
     val configured: Boolean get() = url.isNotEmpty() && secret.isNotEmpty()
 
-    var miuiConfirmed: Boolean
-        get() = sp.getBoolean(KEY_MIUI_CONFIRMED, false)
-        set(value) = sp.edit { putBoolean(KEY_MIUI_CONFIRMED, value) }
-    var huaweiConfirmed: Boolean
-        get() = sp.getBoolean(KEY_HUAWEI_CONFIRMED, false)
-        set(value) = sp.edit { putBoolean(KEY_HUAWEI_CONFIRMED, value) }
+    /** A setup-check row the app can't read, confirmed by hand in its steps dialog. */
+    fun isConfirmed(key: String): Boolean = sp.getBoolean("confirmed_$key", false)
 
-    /** Result of a send; [verdict] is null while it is pending, or when [notSent] (forwarding off). */
+    fun setConfirmed(key: String) = sp.edit { putBoolean("confirmed_$key", true) }
+
+    /** Result of a send; [verdict] is null while it is pending, or when [notSent]. */
     data class Status(
         val time: Long,
         val verdict: Verdict?,
@@ -48,24 +46,45 @@ class Prefs(context: Context) {
     }
 
     // ---- Last SMS received ----
-    fun saveSmsReceived(id: String, time: Long, from: String, receiver: String, notSent: Boolean) = sp.edit {
-        putString("sms_id", id)
-        putLong("sms_time", time)
-        putString("sms_from", from)
-        putString("sms_receiver", receiver)
-        remove("sms_verdict")
-        putString("sms_detail", "")
-        putBoolean("sms_retrying", false)
-        putBoolean("sms_not_sent", notSent)
+    // The receiver and retries write these from different threads. The lock makes "is this still
+    // the latest SMS?" and the write one step, so an older result can't land on a newer SMS.
+
+    fun saveSmsReceived(id: String, time: Long, from: String, receiver: String, notSent: Boolean) {
+        synchronized(SMS_LOCK) {
+            sp.edit {
+                putString("sms_id", id)
+                putLong("sms_time", time)
+                putString("sms_from", from)
+                putString("sms_receiver", receiver)
+                remove("sms_verdict")
+                putString("sms_detail", "")
+                putBoolean("sms_retrying", false)
+                putBoolean("sms_not_sent", notSent)
+            }
+        }
     }
 
-    /** Ignored when a newer SMS has arrived since, so a late retry can't overwrite its status. */
+    /** Ignored when a newer SMS has arrived since. */
     fun saveSmsResult(id: String, outcome: Outcome) {
-        if (sp.getString("sms_id", null) != id) return
-        sp.edit {
-            putString("sms_verdict", outcome.verdict.name)
-            putString("sms_detail", outcome.detail)
-            putBoolean("sms_retrying", outcome.retry)
+        synchronized(SMS_LOCK) {
+            if (sp.getString("sms_id", null) != id) return
+            sp.edit {
+                putString("sms_verdict", outcome.verdict.name)
+                putString("sms_detail", outcome.detail)
+                putBoolean("sms_retrying", outcome.retry)
+            }
+        }
+    }
+
+    /** A queued retry was dropped because forwarding is off or not set up. */
+    fun markSmsNotSent(id: String) {
+        synchronized(SMS_LOCK) {
+            if (sp.getString("sms_id", null) != id) return
+            sp.edit {
+                remove("sms_verdict")
+                putBoolean("sms_retrying", false)
+                putBoolean("sms_not_sent", true)
+            }
         }
     }
 
@@ -91,7 +110,6 @@ class Prefs(context: Context) {
         const val KEY_SECRET = "secret"
         const val KEY_SIM1 = "sim1Label"
         const val KEY_SIM2 = "sim2Label"
-        private const val KEY_MIUI_CONFIRMED = "miuiConfirmed"
-        private const val KEY_HUAWEI_CONFIRMED = "huaweiConfirmed"
+        private val SMS_LOCK = Any()
     }
 }

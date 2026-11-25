@@ -39,7 +39,10 @@
     <string name="check_notification_sms">Notification SMS (verification codes)</string>
     <string name="check_notification_sms_todo">⚠️ Needed for verification codes. Tap, then allow \"Notification SMS\"</string>
 
-    <string name="check_unreadable">⚠️ Can\'t check this automatically. Tap to open the setting</string>
+    <string name="check_unreadable">⚠️ Can\'t check this automatically. Tap to see what to set</string>
+    <string name="steps_miui_autostart">Turn on autostart for SMS Hooks:\nApp info → Autostart → On</string>
+    <string name="steps_miui_notification_sms">Allow notification SMS (needed for verification codes):\nApp info → Permissions → Notification SMS → Allow</string>
+    <string name="export_failed">Couldn\'t save the log</string>
 
     <string name="check_miui_manual">Battery saver, network SMS, lock in recents</string>
     <string name="check_huawei_manual">App launch, code protection, lock in recents</string>

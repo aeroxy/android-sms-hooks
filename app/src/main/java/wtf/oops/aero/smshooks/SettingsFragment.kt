@@ -26,6 +26,7 @@ import androidx.preference.PreferenceManager
 import androidx.preference.SwitchPreferenceCompat
 import wtf.oops.aero.smshooks.core.Verdict
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
+import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -38,7 +39,6 @@ import kotlin.concurrent.thread
 class SettingsFragment : PreferenceFragmentCompat() {
 
     private lateinit var prefs: Prefs
-    private var testRunning = false
     private val mainThread = Handler(Looper.getMainLooper())
     private val onPrefsChanged = SharedPreferences.OnSharedPreferenceChangeListener { _, _ -> refreshChecks() }
 
@@ -179,7 +179,10 @@ class SettingsFragment : PreferenceFragmentCompat() {
                     Device.miuiOpAllowed(ctx, Device.MIUI_OP_AUTO_START),
                     R.string.check_on,
                     R.string.check_autostart_todo,
-                ) { open(miuiAutostart(), appDetails()) },
+                    confirmKey = "miui_autostart",
+                    steps = R.string.steps_miui_autostart,
+                    settings = listOf(miuiAutostart(), appDetails()),
+                ),
             )
             add(
                 readableRow(
@@ -187,21 +190,21 @@ class SettingsFragment : PreferenceFragmentCompat() {
                     Device.miuiOpAllowed(ctx, Device.MIUI_OP_READ_NOTIFICATION_SMS),
                     R.string.check_allowed,
                     R.string.check_notification_sms_todo,
-                ) { open(miuiPermissionEditor(), appDetails()) },
+                    confirmKey = "miui_notification_sms",
+                    steps = R.string.steps_miui_notification_sms,
+                    settings = listOf(miuiPermissionEditor(), appDetails()),
+                ),
             )
-            add(
-                confirmRow(R.string.check_miui_manual, prefs.miuiConfirmed) {
-                    showSteps(R.string.steps_miui, listOf(appDetails())) { prefs.miuiConfirmed = true }
-                },
-            )
+            add(confirmRow(R.string.check_miui_manual, "miui_manual", R.string.steps_miui, listOf(appDetails())))
         }
         if (Device.isHuawei) {
             add(
-                confirmRow(R.string.check_huawei_manual, prefs.huaweiConfirmed) {
-                    showSteps(R.string.steps_huawei, listOf(huaweiAppLaunch(), appDetails())) {
-                        prefs.huaweiConfirmed = true
-                    }
-                },
+                confirmRow(
+                    R.string.check_huawei_manual,
+                    "huawei_manual",
+                    R.string.steps_huawei,
+                    listOf(huaweiAppLaunch(), appDetails()),
+                ),
             )
         }
         add(testRow())
@@ -226,33 +229,43 @@ class SettingsFragment : PreferenceFragmentCompat() {
         }
     }
 
-    /** A setting the app reads directly; null means it couldn't be read on this phone. */
+    /**
+     * A setting the app reads directly. When this phone won't let it be read ([state] null), the row
+     * works like a manual one instead: tap for the steps, then confirm with 已完成.
+     */
     private fun readableRow(
         @StringRes title: Int,
         state: Boolean?,
         @StringRes okText: Int,
         @StringRes todoText: Int,
-        onClick: () -> Unit,
+        confirmKey: String,
+        @StringRes steps: Int,
+        settings: List<Intent>,
     ): Row {
-        val summary = when (state) {
-            true -> getString(okText)
-            false -> getString(todoText)
-            null -> getString(R.string.check_unreadable)
+        if (state == null) return confirmRow(title, confirmKey, steps, settings, R.string.check_unreadable)
+        return Row(getString(title), getString(if (state) okText else todoText), state) {
+            open(*settings.toTypedArray())
         }
-        return Row(getString(title), summary, state == true, onClick)
     }
 
-    /** Settings no app can read: shown as 请确认 until confirmed in the steps dialog. */
-    private fun confirmRow(@StringRes title: Int, confirmed: Boolean, onClick: () -> Unit) = Row(
-        getString(title),
-        getString(if (confirmed) R.string.check_confirmed else R.string.check_confirm_todo),
-        confirmed,
-        onClick,
-    )
+    /** A setting no app can read: ⚠️ until confirmed in its steps dialog. */
+    private fun confirmRow(
+        @StringRes title: Int,
+        key: String,
+        @StringRes steps: Int,
+        settings: List<Intent>,
+        @StringRes todoText: Int = R.string.check_confirm_todo,
+    ): Row {
+        val confirmed = prefs.isConfirmed(key)
+        return Row(getString(title), getString(if (confirmed) R.string.check_confirmed else todoText), confirmed) {
+            showSteps(steps, settings) { prefs.setConfirmed(key) }
+        }
+    }
 
     private fun testRow(): Row {
         val title = getString(R.string.check_test)
-        if (testRunning) return Row(title, getString(R.string.check_test_running), ok = true, onClick = null)
+        // Still pending, so it doesn't count as done.
+        if (testInFlight) return Row(title, getString(R.string.check_test_running), ok = false, onClick = null)
         val last = prefs.lastTest() ?: return Row(title, getString(R.string.check_test_todo), ok = false) { runTest() }
         val label = last.verdict?.let { getString(it.labelRes()) }.orEmpty()
         val summary = if (last.verdict == Verdict.OK) {
@@ -305,16 +318,16 @@ class SettingsFragment : PreferenceFragmentCompat() {
             toast(R.string.check_test_needs_setup)
             return
         }
-        if (testRunning) return
-        testRunning = true
+        if (testInFlight) return
+        testInFlight = true
         refreshChecks()
         thread {
             val outcome = Forwarder.send(ctx, Forwarder.testContent(), System.currentTimeMillis(), Forwarder.TEST_TIMEOUT_S)
             Forwarder.log(ctx, "test", outcome)
-            Prefs(ctx).saveTest(outcome)
             mainThread.post {
-                testRunning = false
-                if (isAdded) refreshChecks()
+                testInFlight = false
+                // Saving notifies the preference listener, which refreshes whichever screen is showing.
+                Prefs(ctx).saveTest(outcome)
             }
         }
     }
@@ -360,9 +373,14 @@ class SettingsFragment : PreferenceFragmentCompat() {
         }
         val header = "SMS Hooks ${BuildConfig.VERSION_NAME} (${BuildConfig.GIT_SHA}) · " +
             "${Build.MANUFACTURER} ${Build.MODEL} · Android ${Build.VERSION.RELEASE}\n"
-        ctx.contentResolver.openOutputStream(uri)?.use { out ->
-            out.write(header.toByteArray())
-            log.inputStream().use { it.copyTo(out) }
+        try {
+            val stream = ctx.contentResolver.openOutputStream(uri) ?: throw IOException("no output stream")
+            stream.use { out ->
+                out.write(header.toByteArray())
+                log.inputStream().use { it.copyTo(out) }
+            }
+        } catch (e: Exception) {
+            toast(R.string.export_failed)
         }
     }
 
@@ -397,6 +415,14 @@ class SettingsFragment : PreferenceFragmentCompat() {
     private fun time(millis: Long): String = SimpleDateFormat("MM-dd HH:mm", Locale.getDefault()).format(Date(millis))
 
     private fun toast(@StringRes text: Int) = Toast.makeText(requireContext(), text, Toast.LENGTH_LONG).show()
+
+    private companion object {
+        /**
+         * One test at a time, app-wide. It outlives a recreated screen, so a second test can't start
+         * and finish out of order. Only touched on the main thread.
+         */
+        var testInFlight = false
+    }
 }
 
 @StringRes

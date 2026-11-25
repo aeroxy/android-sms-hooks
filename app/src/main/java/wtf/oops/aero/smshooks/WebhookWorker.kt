@@ -6,34 +6,36 @@ import androidx.work.WorkerParameters
 import wtf.oops.aero.smshooks.core.Verdict
 
 /**
- * Retries a send the receiver couldn't finish. It reads the URL and secret at run time, so a fix
- * made in the app applies to messages still waiting.
+ * Retries a send the receiver couldn't finish. The SMS itself is read from the [Outbox], and the URL
+ * and secret at run time, so a fix made in the app applies to messages still waiting.
  */
 class WebhookWorker(context: Context, params: WorkerParameters) : Worker(context, params) {
 
     override fun doWork(): Result {
-        val content = inputData.getString(KEY_CONTENT) ?: return Result.failure()
+        val context = applicationContext
+        val id = inputData.getString(KEY_ID) ?: return Result.failure()
         val timestamp = inputData.getLong(KEY_TIMESTAMP, System.currentTimeMillis())
-        val id = inputData.getString(KEY_ID).orEmpty()
-        val prefs = Prefs(applicationContext)
+        // Nothing saved means it was already delivered or dropped.
+        val content = Outbox.get(context, id) ?: return Result.success()
+
+        val prefs = Prefs(context)
         if (!prefs.enabled || !prefs.configured) {
-            EventLog.write(applicationContext, "RETRY dropped: forwarding is off or not set up")
+            EventLog.write(context, "RETRY dropped: forwarding is off or not set up")
+            prefs.markSmsNotSent(id)
+            Outbox.remove(context, id)
             return Result.failure()
         }
 
-        val outcome = Forwarder.send(applicationContext, content, timestamp, Forwarder.WORKER_TIMEOUT_S)
-        Forwarder.log(applicationContext, "retry#${runAttemptCount + 1}", outcome)
+        val outcome = Forwarder.send(context, content, timestamp, Forwarder.WORKER_TIMEOUT_S)
+        Forwarder.log(context, "retry#${runAttemptCount + 1}", outcome)
         prefs.saveSmsResult(id, outcome)
-        return when {
-            outcome.verdict == Verdict.OK -> Result.success()
-            outcome.retry -> Result.retry()
-            else -> Result.failure()
-        }
+        if (outcome.retry) return Result.retry()
+        Outbox.remove(context, id)
+        return if (outcome.verdict == Verdict.OK) Result.success() else Result.failure()
     }
 
     companion object {
         const val KEY_ID = "SMS_ID"
-        const val KEY_CONTENT = "CONTENT"
         const val KEY_TIMESTAMP = "SMS_TIMESTAMP"
     }
 }

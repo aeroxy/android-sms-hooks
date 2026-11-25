@@ -39,7 +39,10 @@
     <string name="check_notification_sms">通知类短信（验证码）</string>
     <string name="check_notification_sms_todo">⚠️ 收验证码必需。点击后把“通知类短信”设为允许</string>
 
-    <string name="check_unreadable">⚠️ 无法自动检测，请点击打开设置检查</string>
+    <string name="check_unreadable">⚠️ 无法自动检测，点击查看需要设置什么</string>
+    <string name="steps_miui_autostart">打开 SMS Hooks 的自启动：\n应用信息 → 自启动 → 打开</string>
+    <string name="steps_miui_notification_sms">允许“通知类短信”（收验证码必需）：\n应用信息 → 权限管理 → 通知类短信 → 允许</string>
+    <string name="export_failed">日志保存失败</string>
 
     <string name="check_miui_manual">省电策略、免费网络短信、锁定后台</string>
     <string name="check_huawei_manual">应用启动管理、验证码保护、锁定后台</string>

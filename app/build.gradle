@@ -25,20 +25,23 @@ android {
         buildConfig = true
     }
 
-    // A fixed, committed debug key: every CI build has the same signature, so a new APK installs
-    // over the previous one and keeps its settings. It protects nothing and is not a release key.
-    signingConfigs {
-        debug {
-            storeFile = file('debug.keystore')
-            storePassword = 'android'
-            keyAlias = 'androiddebugkey'
-            keyPassword = 'android'
+    // CI signs with a private key from repository secrets (see the workflow), so every CI build has
+    // the same signature and a new APK installs over the previous one, keeping its settings. Without
+    // that key, as in a local build, Android's per-machine debug key is used instead.
+    def keystore = System.getenv('SIGNING_KEYSTORE')
+    if (keystore) {
+        signingConfigs {
+            create('ci') {
+                storeFile = file(keystore)
+                storePassword = System.getenv('SIGNING_KEYSTORE_PASSWORD')
+                keyAlias = 'smshooks'
+                keyPassword = System.getenv('SIGNING_KEYSTORE_PASSWORD')
+            }
         }
-    }
-
-    buildTypes {
-        debug {
-            signingConfig = signingConfigs.debug
+        buildTypes {
+            debug {
+                signingConfig = signingConfigs.ci
+            }
         }
     }
 }

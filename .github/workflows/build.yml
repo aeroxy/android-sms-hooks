@@ -13,10 +13,26 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      # For a pull request, name the APK after the PR's head commit, not GitHub's merge commit.
+      # The commit that is built and that the APK is named after. For a pull request this is the
+      # PR's head commit, not the merge commit GitHub would otherwise check out.
       APP_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.APP_COMMIT }}
+
+      # Without the key, the APK would be signed with a throwaway key and couldn't update the
+      # installed app, so a missing secret fails the build.
+      - name: Restore the signing key
+        env:
+          SIGNING_KEYSTORE_BASE64: ${{ secrets.SIGNING_KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$SIGNING_KEYSTORE_BASE64" ]; then
+            echo "::error::Repository secret SIGNING_KEYSTORE_BASE64 is not set"
+            exit 1
+          fi
+          echo "$SIGNING_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/signing.p12"
+          echo "SIGNING_KEYSTORE=$RUNNER_TEMP/signing.p12" >> "$GITHUB_ENV"
 
       - uses: actions/setup-java@v6
         with:
@@ -27,6 +43,8 @@ jobs:
       - uses: gradle/actions/setup-gradle@v6
 
       - name: Build and run unit tests
+        env:
+          SIGNING_KEYSTORE_PASSWORD: ${{ secrets.SIGNING_KEYSTORE_PASSWORD }}
         run: ./gradlew assembleDebug testDebugUnitTest
 
       - name: Name the APK and print its signing certificate
