@@ -1,0 +1,72 @@
+plugins {
+    id 'com.android.application'
+}
+
+// CI passes these in, so every APK says which run and commit it came from.
+def runNumber = (System.getenv('GITHUB_RUN_NUMBER') ?: '0').toInteger()
+def commit = (System.getenv('APP_COMMIT') ?: 'local').take(7)
+
+android {
+    namespace = 'wtf.oops.aero.smshooks'
+    compileSdk = 37
+
+    defaultConfig {
+        applicationId = 'wtf.oops.aero.smshooks'
+        minSdk = 29
+        // Not 37: Android 17 withholds OTP SMS for 3 hours from apps targeting API 37+.
+        targetSdk = 36
+        versionCode = 100 + runNumber
+        versionName = "0.5.${runNumber}"
+        buildConfigField 'String', 'GIT_SHA', "\"${commit}\""
+    }
+
+    buildFeatures {
+        viewBinding = true
+        buildConfig = true
+    }
+
+    // A fixed, committed debug key: every CI build has the same signature, so a new APK installs
+    // over the previous one and keeps its settings. It protects nothing and is not a release key.
+    signingConfigs {
+        debug {
+            storeFile = file('debug.keystore')
+            storePassword = 'android'
+            keyAlias = 'androiddebugkey'
+            keyPassword = 'android'
+        }
+    }
+
+    buildTypes {
+        debug {
+            signingConfig = signingConfigs.debug
+        }
+    }
+}
+
+// OkHttp's Android artifact sets itself up with Android APIs, which fail in plain JVM unit tests.
+// Tests use the JVM artifact instead (declared below).
+configurations.configureEach {
+    def n = name.toLowerCase()
+    if (n.contains('unittest') || n.contains('hosttest')) {
+        exclude group: 'com.squareup.okhttp3', module: 'okhttp-android'
+    }
+}
+
+dependencies {
+    implementation 'androidx.activity:activity-ktx:1.13.0'
+    implementation 'androidx.appcompat:appcompat:1.8.0'
+    implementation 'androidx.constraintlayout:constraintlayout:2.2.2'
+    implementation 'androidx.core:core-ktx:1.19.1'
+    implementation 'androidx.fragment:fragment-ktx:1.9.1'
+    implementation 'androidx.navigation:navigation-fragment-ktx:2.10.2'
+    implementation 'androidx.preference:preference-ktx:1.2.1'
+    implementation 'androidx.work:work-runtime-ktx:2.12.0'
+    implementation 'com.google.android.material:material:1.14.0'
+    implementation 'com.squareup.okhttp3:okhttp:5.5.1'
+
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'com.squareup.okhttp3:mockwebserver3:5.5.1'
+    testImplementation 'com.squareup.okhttp3:okhttp-jvm:5.5.1'
+    // Real org.json for JVM tests; the Android one is a stub there.
+    testImplementation 'org.json:json:20260814'
+}

@@ -1,0 +1,96 @@
+<resources>
+    <string name="app_name">SMS Hooks</string>
+
+    <!-- Permission screens -->
+    <string name="btn_app_settings">System Settings</string>
+    <string name="btn_request_permissions">OK, try again</string>
+    <string name="img_alt_notify">Confirm</string>
+    <string name="text_sms_permission_edu">To forward your SMS, the app needs access to incoming SMS messages.</string>
+    <string name="text_sms_permission_denied_help">The SMS permission is missing. Please allow it in system settings.</string>
+    <string name="title_sms_permission_edu">Grant Permissions</string>
+    <string name="title_sms_permission_denied">We\'re Locked Out</string>
+
+    <!-- Setup check -->
+    <string name="cat_checks">Setup check</string>
+    <string name="summary_all_ok">✅ All good</string>
+    <string name="summary_todo">⚠️ %d item(s) need attention</string>
+    <string name="check_tap_to_fix">Tap a ⚠️ row to fix it</string>
+
+    <string name="check_server">Server URL and secret</string>
+    <string name="check_server_ok">✅ Filled in</string>
+    <string name="check_server_todo">⚠️ Fill in the server URL and secret below</string>
+    <string name="check_server_off">⚠️ Forwarding is switched off below</string>
+
+    <string name="check_sms">SMS permission</string>
+    <string name="check_allowed">✅ Allowed</string>
+    <string name="check_sms_todo">⚠️ Tap to allow (choose \"Always allow\")</string>
+
+    <string name="check_battery">Battery optimization</string>
+    <string name="check_off">✅ Off</string>
+    <string name="check_battery_todo">⚠️ Tap and allow the app to run in the background</string>
+
+    <string name="check_unused">Remove permissions if app is unused</string>
+    <string name="check_unused_todo">⚠️ Tap and turn this switch off</string>
+
+    <string name="check_autostart">Autostart</string>
+    <string name="check_on">✅ On</string>
+    <string name="check_autostart_todo">⚠️ Tap and turn on autostart for SMS Hooks</string>
+
+    <string name="check_notification_sms">Notification SMS (verification codes)</string>
+    <string name="check_notification_sms_todo">⚠️ Needed for verification codes. Tap, then allow \"Notification SMS\"</string>
+
+    <string name="check_unreadable">⚠️ Can\'t check this automatically. Tap to open the setting</string>
+
+    <string name="check_miui_manual">Battery saver, network SMS, lock in recents</string>
+    <string name="check_huawei_manual">App launch, code protection, lock in recents</string>
+    <string name="check_confirm_todo">⚠️ Tap to see what to set</string>
+    <string name="check_confirmed">✅ Confirmed</string>
+    <string name="steps_miui">1. App info → Battery saver → No restrictions\n2. Messages app → Settings → turn off \"Free network messages\"\n3. Open recent apps and pull down the SMS Hooks card to lock it\n4. App info → Permissions: set every permission to \"Always allow\" and turn off \"Blank pass\"</string>
+    <string name="steps_huawei">1. Settings → Apps → App launch → SMS Hooks: turn off \"Manage automatically\", then turn on Auto-launch, Secondary launch and Run in background\n2. Messages app → Settings → turn off verification code protection\n3. Open recent apps and pull down the SMS Hooks card to lock it\n4. If the icon has a red \"!\": Phone Manager → Virus scan → App control → remove the restriction</string>
+    <string name="btn_open_settings">Open settings</string>
+    <string name="btn_done">Done</string>
+
+    <string name="check_test">Test send</string>
+    <string name="check_test_todo">⚠️ Tap to send a test message</string>
+    <string name="check_test_running">Sending…</string>
+    <string name="check_test_needs_setup">Fill in the server URL and secret first</string>
+    <string name="status_line">%1$s · %2$s</string>
+    <string name="status_line_detail">%1$s · %2$s\n%3$s</string>
+
+    <string name="check_last_sms">Last SMS received</string>
+    <string name="check_last_sms_none">None yet. Get a verification code from any app and check it shows up here</string>
+    <string name="last_sms_line">%1$s · [%2$s] %3$s\n%4$s</string>
+    <string name="last_sms_pending">Sending…</string>
+    <string name="last_sms_not_sent">⚠️ Not sent: forwarding is off or not set up</string>
+    <string name="retrying_suffix">%1$s · will retry automatically</string>
+
+    <!-- Send results -->
+    <string name="result_ok">✅ Sent</string>
+    <string name="result_channel_failed">⚠️ Server couldn\'t deliver</string>
+    <string name="result_bad_secret">⚠️ Wrong secret</string>
+    <string name="result_bad_url">⚠️ Wrong URL</string>
+    <string name="result_server_error">⚠️ Server error</string>
+    <string name="result_network_down">🛜 Can\'t reach the server</string>
+    <string name="result_phone_offline">📵 Phone is offline</string>
+
+    <!-- Forwarding settings -->
+    <string name="cat_forwarding">Forwarding</string>
+    <string name="pref_enabled">Forward SMS</string>
+    <string name="pref_url">Server URL</string>
+    <string name="pref_url_help">The server\'s https:// address</string>
+    <string name="pref_secret">Secret</string>
+    <string name="pref_sim1">SIM 1 label</string>
+    <string name="pref_sim2">SIM 2 label</string>
+    <string name="pref_sim_help">Optional, e.g. the SIM\'s phone number. Shown as [SIM1 label] in each message</string>
+    <string name="not_set">Not set</string>
+    <string name="is_set">Set</string>
+    <string name="optional">Optional</string>
+    <string name="invalid_url">Enter an address starting with https://</string>
+
+    <!-- Debug -->
+    <string name="cat_debug">Debug</string>
+    <string name="pref_export_logs">Export log</string>
+    <string name="pref_export_logs_summary">Save the log as a file to send to whoever set this up</string>
+    <string name="no_log_yet">There is no log yet</string>
+    <string name="pref_version">Version</string>
+</resources>

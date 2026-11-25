@@ -1,0 +1,61 @@
+<PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <!-- Rows are added in SettingsFragment and re-checked every time the app comes back. -->
+    <PreferenceCategory
+        app:iconSpaceReserved="false"
+        app:key="checks"
+        app:title="@string/cat_checks" />
+
+    <PreferenceCategory
+        app:iconSpaceReserved="false"
+        app:key="forwarding"
+        app:title="@string/cat_forwarding">
+
+        <SwitchPreferenceCompat
+            app:defaultValue="true"
+            app:iconSpaceReserved="false"
+            app:key="webhookEnabled"
+            app:title="@string/pref_enabled" />
+
+        <EditTextPreference
+            app:dialogMessage="@string/pref_url_help"
+            app:iconSpaceReserved="false"
+            app:key="webhookUrl"
+            app:title="@string/pref_url" />
+
+        <EditTextPreference
+            app:iconSpaceReserved="false"
+            app:key="secret"
+            app:title="@string/pref_secret" />
+
+        <EditTextPreference
+            app:dialogMessage="@string/pref_sim_help"
+            app:iconSpaceReserved="false"
+            app:key="sim1Label"
+            app:title="@string/pref_sim1" />
+
+        <EditTextPreference
+            app:dialogMessage="@string/pref_sim_help"
+            app:iconSpaceReserved="false"
+            app:key="sim2Label"
+            app:title="@string/pref_sim2" />
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        app:iconSpaceReserved="false"
+        app:key="debug"
+        app:title="@string/cat_debug">
+
+        <Preference
+            app:iconSpaceReserved="false"
+            app:key="exportLogs"
+            app:summary="@string/pref_export_logs_summary"
+            app:title="@string/pref_export_logs" />
+
+        <Preference
+            app:iconSpaceReserved="false"
+            app:key="version"
+            app:selectable="false"
+            app:title="@string/pref_version" />
+    </PreferenceCategory>
+</PreferenceScreen>
