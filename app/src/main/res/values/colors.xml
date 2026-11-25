@@ -11,5 +11,6 @@
     <color name="denim">#1060BC</color>
     <color name="fuzzyWuzzy">#C66C72</color>
     <color name="mantis">#78BC61</color>
-    <color name="terraCotta">#ED6A5A</color>
+    <!-- Dark enough for white text on it, and for it as text on white (≥ 4.5:1). -->
+    <color name="terraCotta">#C0453A</color>
 </resources>

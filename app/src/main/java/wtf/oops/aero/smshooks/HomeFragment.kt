@@ -18,6 +18,22 @@ class HomeFragment : Fragment() {
             ActivityResultContracts.RequestPermission()
         ) { isGranted -> onAskPermissionResult(isGranted) }
 
+    /**
+     * Whether the permission dialog is already showing. Kept across recreation (e.g. rotating the
+     * phone), which would otherwise launch a second request that Android answers as "denied".
+     */
+    private var requestInFlight = false
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        requestInFlight = savedInstanceState?.getBoolean(KEY_REQUEST_IN_FLIGHT) ?: false
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putBoolean(KEY_REQUEST_IN_FLIGHT, requestInFlight)
+    }
+
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
@@ -27,13 +43,15 @@ class HomeFragment : Fragment() {
             ) == PackageManager.PERMISSION_GRANTED
         ) {
             findNavController().navigate(R.id.action_homeFragment_to_settingsFragment)
-        } else {
+        } else if (!requestInFlight) {
+            requestInFlight = true
             registrationToAskPermission.launch(Manifest.permission.RECEIVE_SMS)
         }
         return inflater.inflate(R.layout.fragment_home, container, false)
     }
 
     private fun onAskPermissionResult(isGranted: Boolean) {
+        requestInFlight = false
         if (isGranted) {
             findNavController().navigate(R.id.action_homeFragment_to_settingsFragment)
         } else {
@@ -57,5 +75,9 @@ class HomeFragment : Fragment() {
                 }
             }
         }
+    }
+
+    private companion object {
+        const val KEY_REQUEST_IN_FLIGHT = "requestInFlight"
     }
 }

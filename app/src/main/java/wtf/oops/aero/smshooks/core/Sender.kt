@@ -28,7 +28,10 @@ class Sender(private val client: OkHttpClient) {
             .build()
         return try {
             client.newCall(request).execute().use { response ->
-                Classifier.fromHttp(response.code, response.peekBody(MAX_REPLY_BYTES).string())
+                // Only a success needs its body (the server's reply). Other codes are classified by
+                // status alone, so a body cut off mid-read can't turn them into a network error.
+                val body = if (response.isSuccessful) response.peekBody(MAX_REPLY_BYTES).string() else ""
+                Classifier.fromHttp(response.code, body)
             }
         } catch (e: IOException) {
             Classifier.fromError(e, phoneOnline())

@@ -50,7 +50,7 @@ class SettingsFragment : PreferenceFragmentCompat() {
 
     private val exportLog =
         registerForActivityResult(ActivityResultContracts.CreateDocument("text/plain")) { uri ->
-            if (uri != null) writeLog(uri)
+            if (uri != null) exportLogTo(uri)
         }
 
     /** One row of the setup check. [ok] = false counts towards "还有 N 项需要处理". */
@@ -320,6 +320,8 @@ class SettingsFragment : PreferenceFragmentCompat() {
         }
         if (testInFlight) return
         testInFlight = true
+        // The result belongs to the settings as they are now, even if they're edited mid-test.
+        val server = prefs.serverFingerprint
         refreshChecks()
         thread {
             val outcome = Forwarder.send(ctx, Forwarder.testContent(), System.currentTimeMillis(), Forwarder.TEST_TIMEOUT_S)
@@ -327,7 +329,7 @@ class SettingsFragment : PreferenceFragmentCompat() {
             mainThread.post {
                 testInFlight = false
                 // Saving notifies the preference listener, which refreshes whichever screen is showing.
-                Prefs(ctx).saveTest(outcome)
+                Prefs(ctx).saveTest(outcome, server)
             }
         }
     }
@@ -359,28 +361,38 @@ class SettingsFragment : PreferenceFragmentCompat() {
         }
     }
 
-    private fun writeLog(uri: Uri) {
-        val ctx = requireContext()
+    /** Writes off the main thread, since the chosen storage may be slow; only the result is shown. */
+    private fun exportLogTo(uri: Uri) {
+        val ctx = requireContext().applicationContext
+        thread {
+            val problem = writeLog(ctx, uri)
+            if (problem != null) mainThread.post { Toast.makeText(ctx, problem, Toast.LENGTH_LONG).show() }
+        }
+    }
+
+    /** Returns a message to show when the export didn't happen. */
+    @StringRes
+    private fun writeLog(ctx: Context, uri: Uri): Int? {
         val log = EventLog.file(ctx)
         if (!log.exists()) {
-            toast(R.string.no_log_yet)
             try {
                 DocumentsContract.deleteDocument(ctx.contentResolver, uri)
             } catch (e: Exception) {
                 // An empty file left behind is harmless.
             }
-            return
+            return R.string.no_log_yet
         }
         val header = "SMS Hooks ${BuildConfig.VERSION_NAME} (${BuildConfig.GIT_SHA}) · " +
             "${Build.MANUFACTURER} ${Build.MODEL} · Android ${Build.VERSION.RELEASE}\n"
-        try {
+        return try {
             val stream = ctx.contentResolver.openOutputStream(uri) ?: throw IOException("no output stream")
             stream.use { out ->
                 out.write(header.toByteArray())
                 log.inputStream().use { it.copyTo(out) }
             }
+            null
         } catch (e: Exception) {
-            toast(R.string.export_failed)
+            R.string.export_failed
         }
     }
 

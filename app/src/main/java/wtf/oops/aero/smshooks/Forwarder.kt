@@ -13,11 +13,13 @@ import wtf.oops.aero.smshooks.core.Outcome
 import wtf.oops.aero.smshooks.core.Sender
 import java.util.UUID
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 
 /** Sends to the server with the settings typed in the app, and manages queued retries. */
 object Forwarder {
-    /** The receiver must finish well within Android's broadcast limit. */
-    const val RECEIVER_TIMEOUT_S = 8L
+    /** With the enqueue wait below, the receiver stays under Android's ~10 s broadcast limit. */
+    const val RECEIVER_TIMEOUT_S = 7L
+    private const val ENQUEUE_WAIT_S = 2L
     const val WORKER_TIMEOUT_S = 30L
     const val TEST_TIMEOUT_S = 20L
 
@@ -44,20 +46,33 @@ object Forwarder {
      * process is killed mid-send. The retry waits longer than a first send can take, and is
      * cancelled once that send settles. Returns the retry's ID, or null if it couldn't be queued.
      */
-    fun queue(context: Context, smsId: String, content: String, timestamp: Long): UUID? = try {
-        Outbox.put(context, smsId, content)
+    fun queue(context: Context, smsId: String, content: String, timestamp: Long): UUID? {
+        try {
+            Outbox.put(context, smsId, content)
+        } catch (e: Exception) {
+            EventLog.write(context, "ERROR could not save the SMS for a retry: $e")
+            return null
+        }
         val request = OneTimeWorkRequestBuilder<WebhookWorker>()
             .setInputData(workDataOf(WebhookWorker.KEY_ID to smsId, WebhookWorker.KEY_TIMESTAMP to timestamp))
             .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
             .setInitialDelay(30, TimeUnit.SECONDS)
             .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
             .build()
-        // Block until WorkManager has stored it, so the retry exists before the send starts.
-        WorkManager.getInstance(context).enqueue(request).result.get()
-        request.id
-    } catch (e: Exception) {
-        EventLog.write(context, "ERROR could not queue a retry: $e")
-        null
+        return try {
+            // Wait briefly for WorkManager to store the retry before the send starts.
+            WorkManager.getInstance(context).enqueue(request).result.get(ENQUEUE_WAIT_S, TimeUnit.SECONDS)
+            request.id
+        } catch (e: TimeoutException) {
+            // Slow, not failed: the enqueue still completes in the background, and a later cancel by
+            // ID still applies, so keep the saved SMS.
+            EventLog.write(context, "queueing the retry is slow; continuing")
+            request.id
+        } catch (e: Exception) {
+            EventLog.write(context, "ERROR could not queue a retry: $e")
+            Outbox.remove(context, smsId) // nothing would ever read it
+            null
+        }
     }
 
     /** The first send settled without needing a retry: drop the queued retry and the saved copy. */

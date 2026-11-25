@@ -38,7 +38,8 @@ object Classifier {
         code in 300..399 -> Outcome(Verdict.BAD_URL, "HTTP $code (redirect)", retry = false)
         code == 400 || code == 401 || code == 403 -> Outcome(Verdict.BAD_SECRET, "HTTP $code", retry = false)
         code == 404 || code == 405 -> Outcome(Verdict.BAD_URL, "HTTP $code", retry = false)
-        code >= 500 -> Outcome(Verdict.SERVER_ERROR, "HTTP $code", retry = true)
+        // Rate limiting and server-side failures pass; other client errors won't fix themselves.
+        code == 429 || code >= 500 -> Outcome(Verdict.SERVER_ERROR, "HTTP $code", retry = true)
         else -> Outcome(Verdict.SERVER_ERROR, "HTTP $code", retry = false)
     }
 

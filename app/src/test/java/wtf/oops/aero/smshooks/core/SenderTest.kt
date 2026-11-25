@@ -10,6 +10,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import java.util.concurrent.TimeUnit
 
 /**
  * Each test replays an answer the real server setup gives (Caddy in front of send_msg_server),
@@ -53,7 +54,7 @@ class SenderTest {
     fun `request carries exactly what send_msg reads`() {
         reply(200, OK_REPLY)
         send()
-        val request = server.takeRequest()
+        val request = server.takeRequest(5, TimeUnit.SECONDS) ?: error("the send never reached the server")
         assertEquals("POST", request.method)
         assertEquals("/wework/sendWeworkMsg", request.url.encodedPath)
         assertNull("the old a: covid-mp header is obsolete", request.headers["a"])
@@ -101,6 +102,12 @@ class SenderTest {
     fun `method not allowed means wrong URL`() {
         reply(405)
         assertOutcome(Verdict.BAD_URL, retry = false, send())
+    }
+
+    @Test
+    fun `rate limiting is retried`() {
+        reply(429, "Too Many Requests")
+        assertOutcome(Verdict.SERVER_ERROR, retry = true, send())
     }
 
     @Test

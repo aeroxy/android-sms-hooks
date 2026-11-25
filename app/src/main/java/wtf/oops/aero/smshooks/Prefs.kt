@@ -33,15 +33,22 @@ class Prefs(context: Context) {
     )
 
     // ---- Test button ----
-    fun saveTest(outcome: Outcome) = sp.edit {
+
+    /** Identifies the server settings a test ran against; a result only counts for those. */
+    val serverFingerprint: String get() = "$url\n$secret".hashCode().toString()
+
+    /** [fingerprint] is [serverFingerprint] as it was when the test started. */
+    fun saveTest(outcome: Outcome, fingerprint: String) = sp.edit {
         putLong("test_time", System.currentTimeMillis())
         putString("test_verdict", outcome.verdict.name)
         putString("test_detail", outcome.detail)
+        putString("test_server", fingerprint)
     }
 
+    /** Null when there is no test result for the current URL and secret. */
     fun lastTest(): Status? {
         val time = sp.getLong("test_time", 0)
-        if (time == 0L) return null
+        if (time == 0L || sp.getString("test_server", null) != serverFingerprint) return null
         return Status(time, verdictOf(sp.getString("test_verdict", null)), sp.getString("test_detail", "")!!, false)
     }
 
